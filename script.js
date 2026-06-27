@@ -9,6 +9,9 @@ const categories = {
   sst: { name: 'SST / DDS', color: '#ab8740', chip: 'rgba(171,135,64,.13)' }
 };
 
+const SUPABASE_URL = 'https://uukdywfazqvewkwvrweq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_x9nZe7KgH4M1KiSN13rwWg_we5G4t1i';
+
 const seedEvents = [
   { title:'Trabalho', date:'2026-06-25', time:'08:00', category:'trabalho', description:'Atendimento e projetos', priority:'alta', status:'pendente' },
   { title:'DDS', date:'2026-06-25', time:'09:00', category:'sst', description:'Segurança do Trabalho', priority:'media', status:'pendente' },
@@ -69,6 +72,11 @@ let selected = new Date();
 let activePage = 'inicio';
 let activeCategory = 'todas';
 let notificationTimer = null;
+let supabaseClient = null;
+let currentUser = null;
+let suppressRemoteSync = false;
+let remoteSyncTimer = null;
+let authAction = 'signin';
 
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2,'0');
@@ -77,6 +85,7 @@ const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate(
 const brDate = (d) => d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 const parseDate = (iso) => { const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); };
 const todayISO = () => toISO(new Date());
+const dateAfterDays = (iso, days) => { const d = parseDate(iso); d.setDate(d.getDate() + Number(days || 0)); return toISO(d); };
 const esc = (str='') => String(str).replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 
 function migrateData(){
@@ -101,27 +110,46 @@ function save(){
   localStorage.setItem(STORAGE.notes, JSON.stringify(notes));
   localStorage.setItem(STORAGE.settings, JSON.stringify(settings));
   localStorage.setItem(STORAGE.notified, JSON.stringify(notified));
+  queueRemoteSync();
 }
 
-function applySettings(){
-  settings = {
-    ...defaultSettings,
-    ...settings,
-    notifyMinutes: Number(settings.notifyMinutes || defaultSettings.notifyMinutes)
-  };
-  $('todayText').textContent = brDate(new Date());
-  if($('settingUserName')) $('settingUserName').value = settings.userName;
-  if($('settingDefaultTime')) $('settingDefaultTime').value = settings.defaultTime;
-  if($('settingNotifyMinutes')) $('settingNotifyMinutes').value = String(settings.notifyMinutes);
-  document.querySelectorAll('[data-title^="Bom dia"]').forEach(section => {
-    section.dataset.title = `Bom dia, ${settings.userName}! 👋`;
-  });
-  if(activePage === 'inicio'){
-    document.querySelector('.topbar h1').innerHTML = `Bom dia, ${esc(settings.userName)}! <span>👋</span>`;
+async function initSupabase(){
+  if(!window.supabase || !SUPABASE_URL || !SUPABASE_KEY){
+    setAuthStatus('Supabase indisponível. Usando salvamento local.');
+    return;
   }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data.session ? data.session.user : null;
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    currentUser = session ? session.user : null;
+    updateAuthUI();
+    if(currentUser) loadRemoteData();
+  });
+  updateAuthUI();
+  if(currentUser) await loadRemoteData();
 }
 
-function init(){
+function setAuthStatus(text){
+  if($('authStatus')) $('authStatus').textContent = text;
+}
+
+function updateAuthUI(){
+  const logged = Boolean(currentUser);
+  if($('authTitle')) $('authTitle').textContent = logged ? 'Agenda sincronizada' : 'Entrar na agenda';
+  setAuthStatus(logged ? `Conectado como ${currentUser.email}` : 'Conecte sua conta para salvar no Supabase.');
+  if($('authForm')) $('authForm').style.display = logged ? 'none' : 'flex';
+  if($('logoutBtn')) $('logoutBtn').style.display = logged ? 'inline-flex' : 'none';
+}
+
+function queueRemoteSync(){
+  if(suppressRemoteSync || !currentUser || !supabaseClient) return;
+  clearTimeout(remoteSyncTimer);
+  remoteSyncTimer = setTimeout(syncRemoteData, 700);
+}
+
+async function init(){
+  await initSupabase();
   migrateData();
   applySettings();
   $('eventCategory').innerHTML = Object.entries(categories).map(([key,c]) => `<option value="${key}">${c.name}</option>`).join('');
@@ -157,12 +185,22 @@ function init(){
   if($('taskEditCancel')) $('taskEditCancel').onclick = () => $('taskDialog').close();
   if($('taskEditDelete')) $('taskEditDelete').onclick = deleteTaskFromModal;
   if($('taskEditForm')) $('taskEditForm').addEventListener('submit', saveTaskFromModal);
+  if($('authForm')) $('authForm').addEventListener('submit', handleAuthSubmit);
+  document.querySelectorAll('[data-auth-action]').forEach(btn => btn.addEventListener('click', () => { authAction = btn.dataset.authAction; }));
+  if($('logoutBtn')) $('logoutBtn').onclick = logout;
 
   document.querySelectorAll('[data-page]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
   $('eventForm').addEventListener('submit', saveEventFromModal);
   $('taskForm').addEventListener('submit', addQuickTask);
   $('noteForm').addEventListener('submit', addNote);
   if($('workStartDate')) $('workStartDate').value = todayISO();
+  if($('workEndDate')) $('workEndDate').value = dateAfterDays(todayISO(), Number($('workDaysRange') ? $('workDaysRange').value : 90));
+  if($('workDaysRange')) $('workDaysRange').onchange = () => {
+    if($('workStartDate') && $('workEndDate')) $('workEndDate').value = dateAfterDays($('workStartDate').value || todayISO(), Number($('workDaysRange').value || 90));
+  };
+  if($('workStartDate')) $('workStartDate').onchange = () => {
+    if($('workEndDate') && $('workDaysRange')) $('workEndDate').value = dateAfterDays($('workStartDate').value || todayISO(), Number($('workDaysRange').value || 90));
+  };
   if($('workScheduleForm')) $('workScheduleForm').addEventListener('submit', generateWorkSchedule);
   if($('removeWorkSchedule')) $('removeWorkSchedule').onclick = removeGeneratedWorkSchedule;
   if($('removePastEvents')) $('removePastEvents').onclick = () => cleanupEvents('past');
@@ -180,6 +218,24 @@ function init(){
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  }
+}
+
+function applySettings(){
+  settings = {
+    ...defaultSettings,
+    ...settings,
+    notifyMinutes: Number(settings.notifyMinutes || defaultSettings.notifyMinutes)
+  };
+  $('todayText').textContent = brDate(new Date());
+  if($('settingUserName')) $('settingUserName').value = settings.userName;
+  if($('settingDefaultTime')) $('settingDefaultTime').value = settings.defaultTime;
+  if($('settingNotifyMinutes')) $('settingNotifyMinutes').value = String(settings.notifyMinutes);
+  document.querySelectorAll('[data-title^="Bom dia"]').forEach(section => {
+    section.dataset.title = `Bom dia, ${settings.userName}! 👋`;
+  });
+  if(activePage === 'inicio'){
+    document.querySelector('.topbar h1').innerHTML = `Bom dia, ${esc(settings.userName)}! <span>👋</span>`;
   }
 }
 
@@ -313,6 +369,193 @@ function addRecurringEvents(base, repeat, count, intervalDays = 1){
 function updateRepeatIntervalVisibility(){
   if(!$('eventRepeat') || !$('eventRepeatIntervalWrap')) return;
   $('eventRepeatIntervalWrap').classList.toggle('hidden-field', $('eventRepeat').value !== 'custom');
+}
+
+async function handleAuthSubmit(e){
+  e.preventDefault();
+  if(!supabaseClient){
+    setAuthStatus('Supabase ainda não carregou. Verifique a internet.');
+    return;
+  }
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+  if(!email || !password) return;
+  setAuthStatus(authAction === 'signup' ? 'Criando conta...' : 'Entrando...');
+  const response = authAction === 'signup'
+    ? await supabaseClient.auth.signUp({ email, password })
+    : await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if(response.error){
+    setAuthStatus(response.error.message);
+    return;
+  }
+  if(authAction === 'signup' && !response.data.session){
+    setAuthStatus('Conta criada. Se o projeto exigir confirmação, confirme pelo e-mail antes de entrar.');
+    return;
+  }
+  currentUser = response.data.user || (response.data.session && response.data.session.user);
+  $('authPassword').value = '';
+  updateAuthUI();
+  await loadRemoteData();
+}
+
+async function logout(){
+  if(!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  updateAuthUI();
+}
+
+function eventToRow(event){
+  return {
+    user_id: currentUser.id,
+    client_id: event.id,
+    title: event.title,
+    event_date: event.date,
+    start_time: event.time,
+    end_time: event.endTime || null,
+    category: event.category,
+    priority: event.priority,
+    status: event.status,
+    description: event.description || '',
+    auto_work: Boolean(event.autoWork),
+    recurrence_group_id: event.recurrenceGroupId || null,
+    recurrence_rule: event.recurrenceRule || null
+  };
+}
+
+function rowToEvent(row){
+  return {
+    id: row.client_id || row.id,
+    title: row.title,
+    date: row.event_date,
+    time: String(row.start_time).slice(0,5),
+    endTime: row.end_time ? String(row.end_time).slice(0,5) : '',
+    category: row.category,
+    priority: row.priority,
+    status: row.status,
+    description: row.description || '',
+    autoWork: Boolean(row.auto_work),
+    recurrenceGroupId: row.recurrence_group_id || null,
+    recurrenceRule: row.recurrence_rule || null
+  };
+}
+
+function taskToRow(task){
+  return {
+    user_id: currentUser.id,
+    client_id: task.id,
+    text: task.text,
+    due_date: task.due || null,
+    priority: task.priority,
+    done: Boolean(task.done)
+  };
+}
+
+function rowToTask(row){
+  return {
+    id: row.client_id || row.id,
+    text: row.text,
+    due: row.due_date || todayISO(),
+    priority: row.priority,
+    done: Boolean(row.done)
+  };
+}
+
+function noteToRow(note){
+  return {
+    user_id: currentUser.id,
+    client_id: note.id,
+    title: note.title,
+    body: note.text || ''
+  };
+}
+
+function rowToNote(row){
+  return {
+    id: row.client_id || row.id,
+    title: row.title,
+    text: row.body || '',
+    date: row.updated_at ? new Date(row.updated_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')
+  };
+}
+
+async function loadRemoteData(){
+  if(!currentUser || !supabaseClient) return;
+  setAuthStatus('Sincronizando com Supabase...');
+  const [eventsResp, tasksResp, notesResp, settingsResp] = await Promise.all([
+    supabaseClient.from('minhas_atividades_events').select('*').order('event_date').order('start_time'),
+    supabaseClient.from('minhas_atividades_tasks').select('*').order('due_date', { nullsFirst:false }),
+    supabaseClient.from('minhas_atividades_notes').select('*').order('updated_at', { ascending:false }),
+    supabaseClient.from('minhas_atividades_settings').select('*').maybeSingle()
+  ]);
+  const error = eventsResp.error || tasksResp.error || notesResp.error || settingsResp.error;
+  if(error){
+    setAuthStatus(`Erro ao carregar Supabase: ${error.message}`);
+    return;
+  }
+
+  suppressRemoteSync = true;
+  if(eventsResp.data.length || tasksResp.data.length || notesResp.data.length){
+    events = eventsResp.data.map(rowToEvent);
+    tasks = tasksResp.data.map(rowToTask);
+    notes = notesResp.data.map(rowToNote);
+  }
+  if(settingsResp.data){
+    settings = {
+      userName: settingsResp.data.user_name,
+      defaultTime: String(settingsResp.data.default_time).slice(0,5),
+      notifyMinutes: settingsResp.data.notify_minutes
+    };
+  }
+  migrateData();
+  suppressRemoteSync = false;
+  applySettings();
+  renderAll();
+  renderCategoryFilters();
+  setAuthStatus('Sincronizado com Supabase.');
+  await syncRemoteData();
+}
+
+async function syncRemoteData(){
+  if(!currentUser || !supabaseClient || suppressRemoteSync) return;
+  try{
+    const remote = await Promise.all([
+      supabaseClient.from('minhas_atividades_events').select('client_id'),
+      supabaseClient.from('minhas_atividades_tasks').select('client_id'),
+      supabaseClient.from('minhas_atividades_notes').select('client_id')
+    ]);
+    const error = remote.find(r => r.error);
+    if(error && error.error) throw error.error;
+
+    await Promise.all([
+      syncTable('minhas_atividades_events', remote[0].data, events.map(eventToRow), events.map(e => e.id)),
+      syncTable('minhas_atividades_tasks', remote[1].data, tasks.map(taskToRow), tasks.map(t => t.id)),
+      syncTable('minhas_atividades_notes', remote[2].data, notes.map(noteToRow), notes.map(n => n.id)),
+      supabaseClient.from('minhas_atividades_settings').upsert({
+        user_id: currentUser.id,
+        user_name: settings.userName,
+        default_time: settings.defaultTime,
+        notify_minutes: settings.notifyMinutes
+      }, { onConflict:'user_id' })
+    ]);
+    setAuthStatus('Alterações salvas no Supabase.');
+  } catch(err){
+    setAuthStatus(`Falha ao sincronizar: ${err.message}`);
+  }
+}
+
+async function syncTable(table, remoteRows, rows, localIds){
+  const remoteIds = (remoteRows || []).map(row => row.client_id).filter(Boolean);
+  const toDelete = remoteIds.filter(id => !localIds.includes(id));
+  if(toDelete.length){
+    const del = await supabaseClient.from(table).delete().in('client_id', toDelete);
+    if(del.error) throw del.error;
+  }
+  if(rows.length){
+    const upsert = await supabaseClient.from(table).upsert(rows, { onConflict:'user_id,client_id' });
+    if(upsert.error) throw upsert.error;
+  }
 }
 
 function deleteCurrentEvent(){
@@ -714,13 +957,21 @@ function generateWorkSchedule(e){
   const start = $('workStartDate').value || todayISO();
   const time = $('workStartTime').value || '08:00';
   const range = Number($('workDaysRange').value || 90);
+  const end = $('workEndDate') && $('workEndDate').value ? $('workEndDate').value : dateAfterDays(start, range);
   const description = $('workDescription').value.trim() || 'Plantão / trabalho';
   const startDate = parseDate(start);
+  const endDate = parseDate(end);
   let added = 0;
 
-  for(let i=0; i<=range; i+=2){
+  if(endDate < startDate){
+    setCleanupStatus('A data de término precisa ser igual ou posterior à data de início.');
+    return;
+  }
+
+  for(let i=0; ; i+=2){
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
+    if(d > endDate) break;
     const iso = toISO(d);
     const exists = events.some(ev => ev.autoWork && ev.date === iso);
     if(!exists){
@@ -740,7 +991,7 @@ function generateWorkSchedule(e){
     }
   }
   save();
-  setCleanupStatus(`Escala 1x1 gerada: ${added} novos dias de trabalho adicionados.`);
+  setCleanupStatus(`Escala 1x1 gerada até ${parseDate(end).toLocaleDateString('pt-BR')}: ${added} novos dias de trabalho adicionados.`);
   renderAll();
 }
 

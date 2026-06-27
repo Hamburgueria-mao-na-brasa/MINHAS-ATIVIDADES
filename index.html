@@ -8,6 +8,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="assets/app-icon.png" />
   <link rel="stylesheet" href="styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="script.js"></script>
 </head>
 <body>
@@ -52,6 +53,19 @@
           <button class="primary-btn" id="openEventModal"><span>+</span> Novo</button>
         </div>
       </header>
+      <section class="auth-panel" id="authPanel">
+        <div>
+          <strong id="authTitle">Entrar na agenda</strong>
+          <span id="authStatus">Conecte sua conta para salvar no Supabase.</span>
+        </div>
+        <form id="authForm" class="auth-form">
+          <input type="email" id="authEmail" placeholder="E-mail" value="williancarlos0103@gmail.com" required>
+          <input type="password" id="authPassword" placeholder="Senha" required>
+          <button class="ghost-btn" type="submit" data-auth-action="signin">Entrar</button>
+          <button class="primary-btn" type="submit" data-auth-action="signup"><span>+</span> Cadastrar</button>
+        </form>
+        <button class="ghost-btn" type="button" id="logoutBtn">Sair</button>
+      </section>
       <div class="filter-row home-filters" id="categoryFiltersHome"></div>
       <div class="quick-shortcuts">
         <button class="ghost-btn" data-page="rotina">Escala 1x1 + limpeza</button>
@@ -224,11 +238,14 @@
                 <label>Começar em
                   <input type="date" id="workStartDate" required>
                 </label>
-                <label>Horário
-                  <input type="time" id="workStartTime" value="08:00" required>
+                <label>Terminar em
+                  <input type="date" id="workEndDate">
                 </label>
               </div>
               <div class="form-grid">
+                <label>Horário
+                  <input type="time" id="workStartTime" value="08:00" required>
+                </label>
                 <label>Por quantos dias
                   <select id="workDaysRange">
                     <option value="30">30 dias</option>
