@@ -11,6 +11,7 @@ const categories = {
 
 const SUPABASE_URL = 'https://uukdywfazqvewkwvrweq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_x9nZe7KgH4M1KiSN13rwWg_we5G4t1i';
+const AUTH_SESSION_LIMIT_MS = 2 * 60 * 60 * 1000;
 
 const seedEvents = [
   { title:'Trabalho', date:'2026-06-25', time:'08:00', category:'trabalho', description:'Atendimento e projetos', priority:'alta', status:'pendente' },
@@ -53,7 +54,8 @@ const STORAGE = {
   tasks: 'minhasAtividades.tasks',
   notes: 'minhasAtividades.notes',
   settings: 'minhasAtividades.settings',
-  notified: 'minhasAtividades.notified'
+  notified: 'minhasAtividades.notified',
+  authLoginAt: 'minhasAtividades.authLoginAt'
 };
 
 const defaultSettings = {
@@ -121,8 +123,20 @@ async function initSupabase(){
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session ? data.session.user : null;
+  if(data.session && isAuthExpired()){
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    localStorage.removeItem(STORAGE.authLoginAt);
+    setAuthStatus('Sessão expirada. Entre novamente.');
+  }
   supabaseClient.auth.onAuthStateChange((_event, session) => {
     currentUser = session ? session.user : null;
+    if(session && !localStorage.getItem(STORAGE.authLoginAt)){
+      localStorage.setItem(STORAGE.authLoginAt, String(Date.now()));
+    }
+    if(!session){
+      localStorage.removeItem(STORAGE.authLoginAt);
+    }
     updateAuthUI();
     if(currentUser) loadRemoteData();
   });
@@ -137,9 +151,16 @@ function setAuthStatus(text){
 function updateAuthUI(){
   const logged = Boolean(currentUser);
   if($('authTitle')) $('authTitle').textContent = logged ? 'Agenda sincronizada' : 'Entrar na agenda';
-  setAuthStatus(logged ? `Conectado como ${currentUser.email}` : 'Conecte sua conta para salvar no Supabase.');
+  setAuthStatus(logged ? `Conectado como ${currentUser.email}. A senha será pedida novamente em até 2 horas.` : 'Digite e-mail e senha para acessar a agenda.');
   if($('authForm')) $('authForm').style.display = logged ? 'none' : 'flex';
   if($('logoutBtn')) $('logoutBtn').style.display = logged ? 'inline-flex' : 'none';
+  if($('authPanel')) $('authPanel').classList.toggle('locked', !logged);
+  document.body.classList.toggle('auth-locked', !logged);
+}
+
+function isAuthExpired(){
+  const loginAt = Number(localStorage.getItem(STORAGE.authLoginAt) || 0);
+  return !loginAt || Date.now() - loginAt > AUTH_SESSION_LIMIT_MS;
 }
 
 function queueRemoteSync(){
@@ -394,6 +415,7 @@ async function handleAuthSubmit(e){
     return;
   }
   currentUser = response.data.user || (response.data.session && response.data.session.user);
+  localStorage.setItem(STORAGE.authLoginAt, String(Date.now()));
   $('authPassword').value = '';
   updateAuthUI();
   await loadRemoteData();
@@ -403,6 +425,7 @@ async function logout(){
   if(!supabaseClient) return;
   await supabaseClient.auth.signOut();
   currentUser = null;
+  localStorage.removeItem(STORAGE.authLoginAt);
   updateAuthUI();
 }
 
@@ -923,7 +946,17 @@ async function enableNotifications(){
 function startNotificationWatcher(){
   if(notificationTimer) clearInterval(notificationTimer);
   checkNotifications();
-  notificationTimer = setInterval(checkNotifications, 60000);
+  notificationTimer = setInterval(() => {
+    enforceAuthExpiration();
+    checkNotifications();
+  }, 60000);
+}
+
+async function enforceAuthExpiration(){
+  if(currentUser && isAuthExpired()){
+    setAuthStatus('Sessão expirada após 2 horas. Entre novamente.');
+    await logout();
+  }
 }
 
 function checkNotifications(){
