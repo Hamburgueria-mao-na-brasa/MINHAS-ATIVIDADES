@@ -55,7 +55,8 @@ const STORAGE = {
   notes: 'minhasAtividades.notes',
   settings: 'minhasAtividades.settings',
   notified: 'minhasAtividades.notified',
-  authLoginAt: 'minhasAtividades.authLoginAt'
+  authLoginAt: 'minhasAtividades.authLoginAt',
+  tutorialDone: 'minhasAtividades.tutorialDone'
 };
 
 const defaultSettings = {
@@ -153,9 +154,10 @@ function updateAuthUI(){
   if($('authTitle')) $('authTitle').textContent = logged ? 'Agenda sincronizada' : 'Entrar na agenda';
   setAuthStatus(logged ? `Conectado como ${currentUser.email}. A senha será pedida novamente em até 2 horas.` : 'Digite e-mail e senha para acessar a agenda.');
   if($('authForm')) $('authForm').style.display = logged ? 'none' : 'flex';
-  if($('logoutBtn')) $('logoutBtn').style.display = logged ? 'inline-flex' : 'none';
+  if($('accountActions')) $('accountActions').style.display = logged ? 'flex' : 'none';
   if($('authPanel')) $('authPanel').classList.toggle('locked', !logged);
   document.body.classList.toggle('auth-locked', !logged);
+  renderTutorial();
 }
 
 function isAuthExpired(){
@@ -209,6 +211,13 @@ async function init(){
   if($('authForm')) $('authForm').addEventListener('submit', handleAuthSubmit);
   document.querySelectorAll('[data-auth-action]').forEach(btn => btn.addEventListener('click', () => { authAction = btn.dataset.authAction; }));
   if($('logoutBtn')) $('logoutBtn').onclick = logout;
+  if($('changePasswordBtn')) $('changePasswordBtn').onclick = openPasswordModal;
+  if($('showTutorialBtn')) $('showTutorialBtn').onclick = showTutorial;
+  if($('closeTutorial')) $('closeTutorial').onclick = hideTutorial;
+  if($('finishTutorial')) $('finishTutorial').onclick = finishTutorial;
+  if($('closePasswordModal')) $('closePasswordModal').onclick = () => $('passwordDialog').close();
+  if($('cancelPasswordChange')) $('cancelPasswordChange').onclick = () => $('passwordDialog').close();
+  if($('passwordForm')) $('passwordForm').addEventListener('submit', changePassword);
 
   document.querySelectorAll('[data-page]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
   $('eventForm').addEventListener('submit', saveEventFromModal);
@@ -427,6 +436,61 @@ async function logout(){
   currentUser = null;
   localStorage.removeItem(STORAGE.authLoginAt);
   updateAuthUI();
+}
+
+function renderTutorial(){
+  if(!$('tutorialPanel')) return;
+  const done = localStorage.getItem(STORAGE.tutorialDone) === 'true';
+  $('tutorialPanel').style.display = done ? 'none' : 'block';
+}
+
+function showTutorial(){
+  if(!$('tutorialPanel')) return;
+  $('tutorialPanel').style.display = 'block';
+  $('tutorialPanel').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function hideTutorial(){
+  if($('tutorialPanel')) $('tutorialPanel').style.display = 'none';
+}
+
+function finishTutorial(){
+  localStorage.setItem(STORAGE.tutorialDone, 'true');
+  hideTutorial();
+}
+
+function openPasswordModal(){
+  if(!currentUser){
+    setAuthStatus('Entre na conta antes de mudar a senha.');
+    return;
+  }
+  $('passwordForm').reset();
+  $('passwordStatus').textContent = 'Digite a nova senha para atualizar sua conta.';
+  $('passwordDialog').showModal();
+  setTimeout(() => $('newPassword').focus(), 100);
+}
+
+async function changePassword(e){
+  e.preventDefault();
+  if(!supabaseClient || !currentUser) return;
+  const password = $('newPassword').value;
+  const confirm = $('confirmNewPassword').value;
+  if(password !== confirm){
+    $('passwordStatus').textContent = 'As senhas não conferem.';
+    return;
+  }
+  $('passwordStatus').textContent = 'Atualizando senha...';
+  const { error } = await supabaseClient.auth.updateUser({ password });
+  if(error){
+    $('passwordStatus').textContent = error.message;
+    return;
+  }
+  $('passwordStatus').textContent = 'Senha atualizada. A sessão será reiniciada.';
+  setTimeout(async () => {
+    $('passwordDialog').close();
+    await logout();
+    setAuthStatus('Senha alterada. Entre novamente.');
+  }, 900);
 }
 
 function eventToRow(event){

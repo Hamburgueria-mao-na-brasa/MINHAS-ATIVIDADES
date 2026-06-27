@@ -14,6 +14,7 @@ Novidades desta versão:
 - Recorrência de atividades: diária, semanal, mensal ou personalizada a cada X dias.
 - Página Configurações para nome, horário padrão e tempo do lembrete.
 - Login e cadastro com Supabase no projeto Foco Duplo.
+- Botões de sair, mudar senha e tutorial de primeiro acesso dentro do site.
 - Sincronização de atividades, tarefas, anotações e configurações por usuário.
 - Mantém calendário, tarefas, anotações, relatórios e modo app/PWA.
 

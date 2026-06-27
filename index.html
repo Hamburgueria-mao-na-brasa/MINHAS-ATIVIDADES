@@ -64,7 +64,28 @@
           <button class="ghost-btn" type="submit" data-auth-action="signin">Entrar</button>
           <button class="primary-btn" type="submit" data-auth-action="signup"><span>+</span> Cadastrar</button>
         </form>
-        <button class="ghost-btn" type="button" id="logoutBtn">Sair</button>
+        <div class="account-actions" id="accountActions">
+          <button class="ghost-btn" type="button" id="changePasswordBtn">Mudar senha</button>
+          <button class="ghost-btn" type="button" id="showTutorialBtn">Tutorial</button>
+          <button class="ghost-btn" type="button" id="logoutBtn">Sair</button>
+        </div>
+      </section>
+      <section class="tutorial-panel" id="tutorialPanel">
+        <div class="panel-head compact">
+          <div>
+            <h2>Primeiro acesso</h2>
+            <p>Configure sua conta e comece a usar a agenda com segurança.</p>
+          </div>
+          <button class="close-btn" type="button" id="closeTutorial">×</button>
+        </div>
+        <div class="tutorial-steps">
+          <article><strong>1. Cadastre ou entre</strong><span>Use seu e-mail e senha no painel acima. Se ainda não tiver conta, clique em Cadastrar.</span></article>
+          <article><strong>2. Salve seus compromissos</strong><span>Use o botão Novo para criar atividades com data, início, fim, repetição e categoria.</span></article>
+          <article><strong>3. Ative notificações</strong><span>Clique no ícone de notificações e permita no navegador para receber aviso 1 hora antes.</span></article>
+          <article><strong>4. Sincronize no Supabase</strong><span>Quando estiver logado, suas atividades, tarefas, notas e ajustes são salvos na nuvem.</span></article>
+          <article><strong>5. Segurança</strong><span>O app pede senha novamente depois de 2 horas. Use Sair quando terminar.</span></article>
+        </div>
+        <button class="primary-btn" type="button" id="finishTutorial"><span>✓</span> Entendi</button>
       </section>
       <div class="filter-row home-filters" id="categoryFiltersHome"></div>
       <div class="quick-shortcuts">
@@ -478,6 +499,29 @@
           <button type="button" class="ghost-btn" id="taskEditCancel">Cancelar</button>
           <button type="submit" class="primary-btn">Salvar tarefa</button>
         </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="passwordDialog">
+    <form method="dialog" id="passwordForm" class="modal-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Conta</p>
+          <h2>Mudar senha</h2>
+        </div>
+        <button value="cancel" class="close-btn" type="button" id="closePasswordModal">×</button>
+      </div>
+      <label>Nova senha
+        <input type="password" id="newPassword" minlength="6" required>
+      </label>
+      <label>Confirmar nova senha
+        <input type="password" id="confirmNewPassword" minlength="6" required>
+      </label>
+      <div class="cleanup-status" id="passwordStatus">Digite a nova senha para atualizar sua conta.</div>
+      <div class="modal-actions">
+        <button type="button" class="ghost-btn" id="cancelPasswordChange">Cancelar</button>
+        <button type="submit" class="primary-btn">Salvar senha</button>
       </div>
     </form>
   </dialog>
