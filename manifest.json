@@ -1,0 +1,11 @@
+{
+  "name": "Minhas Atividades",
+  "short_name": "Atividades",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f2e9",
+  "theme_color": "#17110b",
+  "icons": [
+    { "src": "assets/app-icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

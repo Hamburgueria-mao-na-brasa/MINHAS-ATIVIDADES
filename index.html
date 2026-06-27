@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#17110b" />
+  <title>Minhas Atividades</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/app-icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="assets/app-icon.png" alt="Minhas Atividades" />
+        <div>
+          <strong>Minhas Atividades</strong>
+          <span>rotina com propósito</span>
+        </div>
+      </div>
+
+      <nav class="side-nav" aria-label="Navegação principal">
+        <button class="active" data-page="inicio"><span>⌂</span>Início</button>
+        <button data-page="calendario"><span>□</span>Calendário</button>
+        <button data-page="tarefas"><span>✓</span>Tarefas</button>
+        <button data-page="metas"><span>◎</span>Metas</button>
+        <button data-page="notas"><span>✎</span>Anotações</button>
+        <button data-page="relatorios"><span>▥</span>Relatórios</button>
+        <button data-page="rotina"><span>◈</span>Rotina</button>
+        <button data-page="configuracoes"><span>⚙</span>Ajustes</button>
+      </nav>
+
+      <div class="verse-card">
+        <span>“</span>
+        Tudo posso naquele que me fortalece.
+        <small>Filipenses 4:13</small>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Agenda pessoal premium</p>
+          <h1>Bom dia, Willian! <span>👋</span></h1>
+          <p id="todayText">Carregando...</p>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="searchBtn" title="Pesquisar">⌕</button>
+          <button class="icon-btn" id="notifyBtn" title="Notificações">◒</button>
+          <button class="primary-btn" id="openEventModal"><span>+</span> Novo</button>
+        </div>
+      </header>
+      <div class="filter-row home-filters" id="categoryFiltersHome"></div>
+      <div class="quick-shortcuts">
+        <button class="ghost-btn" data-page="rotina">Escala 1x1 + limpeza</button>
+        <button class="ghost-btn" data-page="configuracoes">Backup e ajustes</button>
+      </div>
+
+      <section class="page active" id="page-inicio" data-title="Bom dia, Willian! 👋" data-subtitle="Agenda pessoal premium">
+      <section class="stats-grid" aria-label="Resumo do dia">
+        <article class="stat-card"><span>◷</span><small>Hoje</small><strong id="todayCount">0</strong><em>eventos</em></article>
+        <article class="stat-card"><span>✓</span><small>Pendências</small><strong id="pendingCount">0</strong><em>tarefas</em></article>
+        <article class="stat-card"><span>☆</span><small>Compromissos</small><strong id="monthCount">0</strong><em>no mês</em></article>
+        <article class="stat-card"><span>◉</span><small>Foco</small><strong>70%</strong><em>semana</em></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel calendar-panel">
+          <div class="panel-head">
+            <div>
+              <h2 id="monthTitle">Mês</h2>
+              <p>Veja suas marcações por dia</p>
+            </div>
+            <div class="calendar-actions">
+              <button id="prevMonth" aria-label="Mês anterior">‹</button>
+              <button id="goToday">Hoje</button>
+              <button id="nextMonth" aria-label="Próximo mês">›</button>
+            </div>
+          </div>
+
+          <div class="weekdays">
+            <span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span>
+          </div>
+          <div class="calendar" id="calendar"></div>
+
+          <div class="legend" id="legend"></div>
+        </article>
+
+        <aside class="right-column">
+          <article class="panel day-panel">
+            <div class="panel-head compact">
+              <div>
+                <h2>Agenda do dia</h2>
+                <p id="selectedDateText">Hoje</p>
+              </div>
+              <button class="more-btn" id="addSelectedDay">+</button>
+            </div>
+            <div class="timeline" id="dayTimeline"></div>
+          </article>
+
+          <article class="panel focus-panel">
+            <div class="panel-head compact">
+              <div>
+                <h2>Foco da semana</h2>
+                <p>Prioridades principais</p>
+              </div>
+            </div>
+            <div class="progress-item">
+              <span>Finalizar organização do site</span>
+              <strong>70%</strong>
+              <div><i style="width:70%"></i></div>
+            </div>
+            <ul class="checklist" id="checklist">
+              <li><button class="check done">✓</button> Preparar conteúdos da semana</li>
+              <li><button class="check done">✓</button> Revisar compromissos da igreja</li>
+              <li><button class="check"> </button> Separar tarefas de SST</li>
+            </ul>
+          </article>
+        </aside>
+      </section>
+      </section>
+
+      <section class="page" id="page-calendario" data-title="Calendário" data-subtitle="Visão completa das suas marcações">
+        <article class="panel page-panel">
+          <div class="panel-head">
+            <div>
+              <h2 id="monthTitleFull">Calendário completo</h2>
+              <p>Selecione um dia para ver ou adicionar atividades.</p>
+            </div>
+            <div class="calendar-toolbar">
+              <div class="calendar-actions">
+                <button id="prevMonthFull" aria-label="Mês anterior">‹</button>
+                <button id="goTodayFull">Hoje</button>
+                <button id="nextMonthFull" aria-label="Próximo mês">›</button>
+              </div>
+              <input type="month" id="monthJump" aria-label="Escolher mês">
+              <button class="primary-btn" id="calendarNew"><span>+</span> Nova atividade</button>
+            </div>
+          </div>
+          <div class="weekdays"><span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span></div>
+          <div class="calendar large-calendar" id="calendarFull"></div>
+          <div class="filter-row" id="categoryFilters"></div>
+          <div class="legend" id="legendFull"></div>
+          <div class="full-day-panel">
+            <div class="panel-head compact">
+              <div>
+                <h2>Atividades do dia</h2>
+                <p id="selectedDateTextFull">Hoje</p>
+              </div>
+              <button class="more-btn" id="addSelectedDayFull">+</button>
+            </div>
+            <div class="timeline" id="dayTimelineFull"></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="page" id="page-tarefas" data-title="Tarefas" data-subtitle="O que precisa ser feito">
+        <div class="page-grid two">
+          <article class="panel page-panel">
+            <div class="panel-head">
+              <div><h2>Minhas tarefas</h2><p>Marque, acompanhe e finalize suas pendências.</p></div>
+            </div>
+            <form class="quick-form" id="taskForm">
+              <input id="taskInput" placeholder="Ex: finalizar site, preparar DDS..." required>
+              <button class="primary-btn" type="submit"><span>+</span> Adicionar</button>
+            </form>
+            <div class="task-board" id="taskBoard"></div>
+          </article>
+          <article class="panel page-panel mini-panel">
+            <h2>Resumo</h2>
+            <div class="mini-stats">
+              <div><strong id="tasksTotal">0</strong><span>Total</span></div>
+              <div><strong id="tasksDone">0</strong><span>Concluídas</span></div>
+              <div><strong id="tasksOpen">0</strong><span>Pendentes</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="page-metas" data-title="Metas" data-subtitle="Projetos e objetivos em andamento">
+        <div class="page-grid three" id="goalsGrid"></div>
+      </section>
+
+      <section class="page" id="page-notas" data-title="Anotações" data-subtitle="Ideias rápidas e lembretes importantes">
+        <div class="page-grid two">
+          <article class="panel page-panel">
+            <div class="panel-head"><div><h2>Nova anotação</h2><p>Guarde ideias, observações e lembretes.</p></div></div>
+            <form id="noteForm" class="note-form">
+              <input id="noteTitle" placeholder="Título da anotação" required>
+              <textarea id="noteText" placeholder="Escreva sua anotação aqui..." required></textarea>
+              <button class="primary-btn" type="submit"><span>+</span> Salvar anotação</button>
+            </form>
+          </article>
+          <article class="panel page-panel"><h2>Minhas anotações</h2><div class="notes-list" id="notesList"></div></article>
+        </div>
+      </section>
+
+      <section class="page" id="page-relatorios" data-title="Relatórios" data-subtitle="Acompanhe sua rotina de forma simples">
+        <div class="page-grid three">
+          <article class="panel page-panel report-card"><span>◷</span><strong id="reportEvents">0</strong><p>Atividades registradas</p></article>
+          <article class="panel page-panel report-card"><span>✓</span><strong id="reportTasks">0%</strong><p>Tarefas concluídas</p></article>
+          <article class="panel page-panel report-card"><span>☆</span><strong id="reportFocus">70%</strong><p>Foco da semana</p></article>
+        </div>
+        <article class="panel page-panel">
+          <h2>Atividades por categoria</h2>
+          <div class="category-bars" id="categoryBars"></div>
+        </article>
+      </section>
+
+
+      <section class="page" id="page-rotina" data-title="Rotina e limpeza" data-subtitle="Escala de trabalho e organização da agenda">
+        <div class="page-grid two">
+          <article class="panel page-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Escala de trabalho 1x1</h2>
+                <p>Como você está trabalhando hoje, o sistema gera trabalho um dia sim e outro não a partir de hoje.</p>
+              </div>
+            </div>
+            <form class="routine-form" id="workScheduleForm">
+              <div class="form-grid">
+                <label>Começar em
+                  <input type="date" id="workStartDate" required>
+                </label>
+                <label>Horário
+                  <input type="time" id="workStartTime" value="08:00" required>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>Por quantos dias
+                  <select id="workDaysRange">
+                    <option value="30">30 dias</option>
+                    <option value="60">60 dias</option>
+                    <option value="90" selected>90 dias</option>
+                    <option value="180">180 dias</option>
+                  </select>
+                </label>
+                <label>Descrição
+                  <input id="workDescription" value="Plantão / trabalho" placeholder="Ex: Plantão / trabalho">
+                </label>
+              </div>
+              <div class="routine-actions">
+                <button class="primary-btn" type="submit"><span>+</span> Gerar escala</button>
+                <button class="ghost-btn" type="button" id="removeWorkSchedule">Remover escala gerada</button>
+              </div>
+            </form>
+            <div class="schedule-preview" id="workSchedulePreview"></div>
+          </article>
+
+          <article class="panel page-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Limpeza da agenda</h2>
+                <p>Remova atividades antigas, concluídas ou canceladas para deixar tudo organizado.</p>
+              </div>
+            </div>
+            <div class="cleanup-grid">
+              <button class="cleanup-card" id="removePastEvents"><strong>Remover antigas</strong><span>Apaga atividades com data anterior a hoje.</span></button>
+              <button class="cleanup-card" id="removeCompletedEvents"><strong>Remover concluídas</strong><span>Apaga tudo que já foi finalizado.</span></button>
+              <button class="cleanup-card" id="removeCanceledEvents"><strong>Remover canceladas</strong><span>Apaga marcações canceladas.</span></button>
+              <button class="cleanup-card danger" id="clearAllEvents"><strong>Limpar agenda</strong><span>Apaga todas as atividades cadastradas.</span></button>
+            </div>
+            <div class="cleanup-status" id="cleanupStatus">Nenhuma limpeza feita ainda.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="page-configuracoes" data-title="Configurações" data-subtitle="Preferências, backup e notificações">
+        <div class="page-grid two">
+          <article class="panel page-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Preferências</h2>
+                <p>Personalize o nome, horário padrão e lembretes.</p>
+              </div>
+            </div>
+            <form class="settings-form" id="settingsForm">
+              <label>Nome
+                <input id="settingUserName" placeholder="Seu nome">
+              </label>
+              <div class="form-grid">
+                <label>Horário padrão
+                  <input type="time" id="settingDefaultTime">
+                </label>
+                <label>Lembrar antes
+                  <select id="settingNotifyMinutes">
+                    <option value="5">5 minutos</option>
+                    <option value="10">10 minutos</option>
+                    <option value="30">30 minutos</option>
+                    <option value="60" selected>1 hora</option>
+                  </select>
+                </label>
+              </div>
+              <button class="primary-btn" type="submit"><span>✓</span> Salvar ajustes</button>
+            </form>
+            <div class="cleanup-status" id="settingsStatus">Ajustes prontos.</div>
+          </article>
+
+          <article class="panel page-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Backup</h2>
+                <p>Exporte ou restaure seus dados salvos neste navegador.</p>
+              </div>
+            </div>
+            <div class="backup-actions">
+              <button class="cleanup-card" id="exportBackup"><strong>Exportar backup</strong><span>Baixa atividades, tarefas, notas e ajustes em JSON.</span></button>
+              <button class="cleanup-card" id="importBackup"><strong>Importar backup</strong><span>Restaura um arquivo JSON exportado por este app.</span></button>
+              <input type="file" id="backupFile" accept="application/json,.json" hidden>
+            </div>
+            <div class="cleanup-status" id="backupStatus">Nenhum backup importado nesta sessão.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="page-perfil" data-title="Perfil" data-subtitle="Seu espaço pessoal">
+        <article class="panel page-panel profile-card">
+          <img src="assets/app-icon.png" alt="Ícone Minhas Atividades">
+          <div>
+            <p class="eyebrow">Conta pessoal</p>
+            <h2>Willian Carlos</h2>
+            <p>Rotina organizada entre trabalho, marketing, igreja, estudos e projetos pessoais.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Menu inferior">
+    <button class="active" data-page="inicio"><span>⌂</span>Início</button>
+    <button data-page="calendario"><span>□</span>Calendário</button>
+    <button id="mobileAdd" type="button"><span>＋</span></button>
+    <button data-page="tarefas"><span>✓</span>Tarefas</button>
+    <button data-page="rotina"><span>◈</span>Rotina</button>
+    <button data-page="configuracoes"><span>⚙</span>Ajustes</button>
+    <button data-page="perfil"><span>◌</span>Perfil</button>
+  </nav>
+
+  <dialog id="eventDialog">
+    <form method="dialog" id="eventForm" class="modal-card">
+      <input type="hidden" id="eventId" />
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow" id="modalKicker">Nova marcação</p>
+          <h2 id="modalTitle">Adicionar atividade</h2>
+        </div>
+        <button value="cancel" class="close-btn" type="button" id="closeEventModal">×</button>
+      </div>
+
+      <label>Título
+        <input id="eventTitle" placeholder="Ex: Trabalho, culto, cliente..." required />
+      </label>
+      <div class="form-grid">
+        <label>Data
+          <input type="date" id="eventDate" required />
+        </label>
+        <label>Início
+          <input type="time" id="eventTime" required />
+        </label>
+      </div>
+      <label>Fim
+        <input type="time" id="eventEndTime" />
+      </label>
+      <div class="form-grid">
+        <label>Categoria
+          <select id="eventCategory"></select>
+        </label>
+        <label>Prioridade
+          <select id="eventPriority">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </label>
+      </div>
+      <label>Status
+        <select id="eventStatus">
+          <option value="pendente">Pendente</option>
+          <option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </label>
+      <div class="form-grid">
+        <label>Repetição
+          <select id="eventRepeat">
+            <option value="none">Não repetir</option>
+            <option value="daily">Todos os dias</option>
+            <option value="weekly">Toda semana</option>
+            <option value="monthly">Todo mês</option>
+            <option value="custom">Personalizada em dias</option>
+          </select>
+        </label>
+        <label>Quantidade de compromissos
+          <input type="number" id="eventRepeatCount" min="2" max="120" value="4" />
+        </label>
+      </div>
+      <label id="eventRepeatIntervalWrap" class="hidden-field">Repetir a cada quantos dias
+        <input type="number" id="eventRepeatInterval" min="1" max="365" value="2" />
+      </label>
+      <label>Descrição
+        <textarea id="eventDescription" placeholder="Detalhe rápido da atividade"></textarea>
+      </label>
+      <div class="modal-actions split-actions">
+        <button type="button" class="danger-btn" id="deleteEventBtn">Excluir</button>
+        <div>
+          <button type="button" class="ghost-btn" id="completeEventBtn">Concluir</button>
+          <button type="submit" class="primary-btn">Salvar atividade</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="searchDialog">
+    <form method="dialog" class="modal-card search-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Busca rápida</p>
+          <h2>Encontrar no app</h2>
+        </div>
+        <button value="cancel" class="close-btn" type="button" id="closeSearchModal">×</button>
+      </div>
+      <input id="searchInput" placeholder="Buscar atividades, tarefas ou anotações..." autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </form>
+  </dialog>
+
+  <dialog id="taskDialog">
+    <form method="dialog" id="taskEditForm" class="modal-card">
+      <input type="hidden" id="taskEditId">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Editar tarefa</p>
+          <h2>Detalhes da tarefa</h2>
+        </div>
+        <button value="cancel" class="close-btn" type="button" id="closeTaskModal">×</button>
+      </div>
+      <label>Tarefa
+        <input id="taskEditText" required>
+      </label>
+      <div class="form-grid">
+        <label>Prazo
+          <input type="date" id="taskEditDue">
+        </label>
+        <label>Prioridade
+          <select id="taskEditPriority">
+            <option value="baixa">Baixa</option>
+            <option value="media">Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </label>
+      </div>
+      <label class="check-label">
+        <input type="checkbox" id="taskEditDone">
+        Concluída
+      </label>
+      <div class="modal-actions split-actions">
+        <button type="button" class="danger-btn" id="taskEditDelete">Excluir</button>
+        <div>
+          <button type="button" class="ghost-btn" id="taskEditCancel">Cancelar</button>
+          <button type="submit" class="primary-btn">Salvar tarefa</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
